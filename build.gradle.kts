@@ -7,17 +7,19 @@ plugins {
     kotlin("jvm") version "1.3.20"
 }
 
-repositories {
-    jcenter()
+allprojects {
+    repositories {
+        jcenter()
+    }
 }
 
+extra["coroutinesVersion"] = "1.1.1"
 val junitVersion = "5.4.0"
-val coroutinesVersion = "1.1.1"
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$coroutinesVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${extra["coroutinesVersion"]}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${extra["coroutinesVersion"]}")
     implementation("net.ickis:rencode-kt:1.0")
     testImplementation("io.mockk:mockk:1.9.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
