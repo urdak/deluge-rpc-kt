@@ -3,8 +3,8 @@ package net.ickis.deluge.samples
 import net.ickis.deluge.api.DelugeClient
 import net.ickis.deluge.request.Request
 
-object FreeSpace : Request<Int>("core.get_free_space") {
-    override val args: List<Any> = emptyList()
+class CustomCommand(param: Int) : Request<Int>("custom_command") {
+    override val args: List<Any> = listOf(param)
 }
 
-suspend fun DelugeClient.freeSpace() = request(FreeSpace)
+suspend fun DelugeClient.customCommand(param: Int) = request(CustomCommand(param))

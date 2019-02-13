@@ -24,8 +24,11 @@ class DelugeClient private constructor(
     }
 
     suspend fun addTorrent(magnetLink: String) = request(TorrentMagnetRequest(magnetLink))
+
     suspend fun addTorrent(url: URL) = request(TorrentURLRequest(url))
+
     suspend fun addTorrent(path: Path) = request(TorrentPathRequest(path))
+
     suspend fun removeTorrent(torrentId: String, removeData: Boolean) = request(
             RemoveTorrents(torrentId, removeData))
 
@@ -33,4 +36,6 @@ class DelugeClient private constructor(
         val map = request(TorrentStatus(torrentId))
         return Torrent(map)
     }
+
+    suspend fun getFreeSpace() = request(FreeSpace)
 }

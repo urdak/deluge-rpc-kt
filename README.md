@@ -32,11 +32,11 @@ Additional commands can be added to the client by extending the [Request](src/ma
 These commands need to be compatible with the [Deluge RPC API](https://deluge.readthedocs.io/en/develop/reference/api.html).
 
 ```kotlin
-object FreeSpace : Request<Int>("core.get_free_space") {
-    override val args: List<Any> = emptyList()
+class CustomCommand(param: Int) : Request<Int>("custom_command") {
+    override val args: List<Any> = listOf(param)
 }
 
-suspend fun DelugeClient.freeSpace() = request(FreeSpace)
+suspend fun DelugeClient.customCommand(param: Int) = request(CustomCommand(param))
 ```
 > You can get full code [here](samples/src/main/kotlin/net/ickis/deluge/samples/ExtendingTheClient.kt)
 ### Gradle dependency
