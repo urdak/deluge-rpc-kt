@@ -31,13 +31,13 @@ try (DelugeJavaClient client = new DelugeJavaClient(ip, port, username, password
 Additional commands can be added to the client by extending the [Request](src/main/kotlin/net/ickis/deluge/request/Request.kt) class.
 These commands need to be compatible with the [Deluge RPC API](https://deluge.readthedocs.io/en/develop/reference/api.html).
 
-<pre>
+```kotlin
 object FreeSpace : Request<Int>("core.get_free_space") {
     override val args: List<Any> = emptyList()
 }
 
 val request: Int = client.request(FreeSpace)
-</pre>
+```
 
 ### Gradle dependency
 TBD
