@@ -33,14 +33,3 @@ tasks.withType<KotlinCompile> {
         jvmTarget = "1.8"
     }
 }
-
-//jar {
-//    manifest {
-//        attributes 'Main-Class': 'net.ickis.deluge.DelugeClientKt'
-//    }
-//
-//    // This line of code recursively collects and copies all of a project's files
-//    // and adds them to the JAR itself. One can extend this task, to skip certain
-//    // files or particular types at will
-//    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-//}
