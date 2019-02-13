@@ -4,7 +4,7 @@ Provides an extendable API for a Java/Kotlin based on [Deluge RPC](https://delug
 ### Using the client
 
 ##### Kotlin
-Using coroutines:
+Using [coroutines](https://github.com/Kotlin/kotlinx.coroutines):
 ```kotlin
 runBlocking {
     DelugeClient(ip, port, username, password).use { client ->
@@ -16,7 +16,7 @@ runBlocking {
 ```
 
 ##### Java
-Using java.util.concurrent.CompletableFuture:
+Using [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html):
 ```java
 try (DelugeJavaClient client = new DelugeJavaClient(ip, port, username, password)) {
     CompletableFuture<String> torrentIdFuture = client.addTorrent(/*magnetLink/URL/Path*/);
