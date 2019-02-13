@@ -26,5 +26,5 @@ class DelugeJavaClient private constructor(
     fun addTorrent(url: URL) = request(TorrentURLRequest(url))
     fun addTorrent(path: Path) = request(TorrentPathRequest(path))
     fun removeTorrent(torrentId: String, removeData: Boolean) = request(RemoveTorrents(torrentId, removeData))
-    fun getTorrentStatus(torrentId: String) = request(TorrentStatus(torrentId))
+    fun getTorrentStatus(torrentId: String) = request(TorrentStatus(torrentId)).thenApply(::Torrent)!!
 }
