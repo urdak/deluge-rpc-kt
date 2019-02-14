@@ -1,5 +1,8 @@
 package net.ickis.deluge.api
 
+/**
+ * Torrent information that is provided by the daemon.
+ */
 class Torrent(map: Map<String, Any>) {
     val trackers: List<Map<String, String>> by map
     val move_completed_path: String by map

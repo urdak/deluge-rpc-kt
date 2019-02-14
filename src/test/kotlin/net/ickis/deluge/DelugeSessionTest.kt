@@ -7,7 +7,7 @@ import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.runBlocking
 import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.RawResponse
-import net.ickis.deluge.net.SerializedRequest
+import net.ickis.deluge.net.RawRequest
 import net.ickis.deluge.request.Request
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -39,13 +39,13 @@ class DelugeSessionTest {
         val response3 = RawResponse(listOf(1, 2, true))
         every { socket.inputProcessor } returns inputProcessorMock
         coEvery {
-            socket.write(SerializedRequest(request1.serialize(0)))
+            socket.write(RawRequest(request1.serialize(0)))
         } coAnswers { testChan.send(response1) }
         coEvery {
-            socket.write(SerializedRequest(request2.serialize(1)))
+            socket.write(RawRequest(request2.serialize(1)))
         } coAnswers { testChan.send(response2) }
         coEvery {
-            socket.write(SerializedRequest(request3.serialize(2)))
+            socket.write(RawRequest(request3.serialize(2)))
         } coAnswers { testChan.send(response3) }
         every { socket.close() } just Runs
         DelugeSession(socket).use { session ->

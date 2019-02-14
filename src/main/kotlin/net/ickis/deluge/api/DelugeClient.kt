@@ -24,7 +24,6 @@ class DelugeClient private constructor(
      * credentials. The user is responsible for closing the client. Consider using [delugeClient], which automatically
      * performs cleanup.
      */
-    @JvmOverloads
     constructor(address: String,
                 port: Int = DEFAULT_DELUGE_PORT,
                 username: String,

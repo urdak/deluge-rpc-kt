@@ -12,12 +12,16 @@ import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream
 import javax.net.ssl.SSLSocket
 
+/**
+ * Writes [RawRequest]'s to the [SSLSocket] in the expected format.
+ * Reads [RawResponse]'s from the [SSLSocket] in the expected format.
+ */
 internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Closeable {
     private var closed = false
     private val job = Job()
     override val coroutineContext = Dispatchers.IO + job
-    private val writeChannel: Channel<SerializedRequest> by lazy {
-        val channel = Channel<SerializedRequest>(50)
+    private val writeChannel: Channel<RawRequest> by lazy {
+        val channel = Channel<RawRequest>(50)
         launch {
             for (request in channel) {
                 try {
@@ -35,6 +39,9 @@ internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Clo
         }
         channel
     }
+    /**
+     * Channel that contains incoming responses.
+     */
     internal val inputProcessor: ReceiveChannel<RawResponse> by lazy {
         produce {
             while (isActive) {
@@ -51,8 +58,11 @@ internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Clo
         }
     }
 
-    suspend fun write(serializedRequest: SerializedRequest) {
-        writeChannel.send(serializedRequest)
+    /**
+     * Writes the [RawRequest] to the socket.
+     */
+    suspend fun write(rawRequest: RawRequest) {
+        writeChannel.send(rawRequest)
     }
 
     override fun close() {
@@ -63,6 +73,6 @@ internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Clo
     }
 }
 
-internal data class SerializedRequest(val data: List<List<Any>>)
+internal data class RawRequest(val data: List<List<Any>>)
 
 internal data class RawResponse(val data: List<*>)

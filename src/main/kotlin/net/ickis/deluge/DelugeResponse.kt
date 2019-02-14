@@ -1,10 +1,15 @@
 package net.ickis.deluge
 
+import net.ickis.deluge.net.RawResponse
 import java.io.IOException
 
 internal sealed class DelugeResponse constructor(open val requestId: Int) {
     companion object {
-        fun create(list: List<*>): DelugeResponse {
+        /**
+         * Creates a [DelugeResponse] from deserialized raw response data.
+         */
+        fun create(rawResponse: RawResponse): DelugeResponse {
+            val list = rawResponse.data
             if (list.size < 3) {
                 throw IOException("Response does not contain sufficient data: $list")
             }
@@ -23,9 +28,15 @@ internal sealed class DelugeResponse constructor(open val requestId: Int) {
         }
     }
 
+    /**
+     * Represents a value response from the daemon.
+     */
     internal data class Value(override val requestId: Int, val value: Any)
         : DelugeResponse(requestId)
 
+    /**
+     * Represents an error response from the daemon.
+     */
     internal data class Error(
             override val requestId: Int,
             val exception: DelugeException
@@ -42,6 +53,9 @@ internal sealed class DelugeResponse constructor(open val requestId: Int) {
         }
     }
 
+    /**
+     * Represents an event response from the daemon.
+     */
     internal data class Event(override val requestId: Int, val value: Any)
         : DelugeResponse(requestId)
 }

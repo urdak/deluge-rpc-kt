@@ -1,6 +1,9 @@
 package net.ickis.deluge.request
 
-internal class LoginRequest(
+/**
+ * Establishes an authenticated session.
+ */
+class LoginRequest(
         private val username: String,
         private val password: String
 ) : Request<Int>("daemon.login") {

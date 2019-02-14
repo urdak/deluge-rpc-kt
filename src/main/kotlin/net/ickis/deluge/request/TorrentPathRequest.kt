@@ -4,7 +4,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 
-internal class TorrentPathRequest(
+/**
+ * Adds a torrent using the specified system [path] of a torrent file.
+ */
+class TorrentPathRequest(
         private val path: Path
 ) : Request<String>("core.add_torrent_file") {
     override val args: List<Any>

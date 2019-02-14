@@ -42,7 +42,7 @@ class DelugeSocketTest {
     fun `Write data to the socket`() = DelugeSocket(sslSocket).use { socket ->
         val request = LoginRequest("user1", "password1").serialize(1)
         runBlocking {
-            socket.write(SerializedRequest(request))
+            socket.write(RawRequest(request))
         }
         while (outputStream.size() < 40) {
         }
