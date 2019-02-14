@@ -20,13 +20,33 @@ internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Clo
     private var closed = false
     private val job = Job()
     override val coroutineContext = Dispatchers.IO + job
-    private val writeChannel: Channel<RawRequest> by lazy {
+    private val writer: Channel<RawRequest> by lazy { socketWriter() }
+    val reader: ReceiveChannel<RawResponse> by lazy { socketReader() }
+
+    /**
+     * Writes the [RawRequest] to the socket.
+     */
+    suspend fun write(rawRequest: RawRequest) {
+        writer.send(rawRequest)
+    }
+
+    override fun close() {
+        closed = true
+        writer.cancel()
+        reader.cancel()
+        job.cancel()
+        socket.close()
+    }
+
+    /**
+     * Creates a channel that can be written into to send encoded data via the [SSLSocket].
+     */
+    private fun CoroutineScope.socketWriter(): Channel<RawRequest> {
         val channel = Channel<RawRequest>(50)
         launch {
             for (request in channel) {
                 try {
-                    val outputStream = RencodeOutputStream(
-                            DeflaterOutputStream(socket.outputStream, true))
+                    val outputStream = RencodeOutputStream(DeflaterOutputStream(socket.outputStream, true))
                     outputStream.writeList(request.data)
                     outputStream.flush()
                 } catch (ex: IOException) {
@@ -37,39 +57,24 @@ internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Clo
                 }
             }
         }
-        channel
+        return channel
     }
+
     /**
-     * Channel that contains incoming responses.
+     * Creates a channel that can be read from to receive decoded responses from the [SSLSocket].
      */
-    internal val inputProcessor: ReceiveChannel<RawResponse> by lazy {
-        produce {
-            while (isActive) {
-                try {
-                    val inputStream = RencodeInputStream(InflaterInputStream(socket.inputStream))
-                    send(RawResponse(inputStream.readList()))
-                } catch (ex: IOException) {
-                    // TODO: log
-                    if (!closed) {
-                        throw ex
-                    }
+    private fun CoroutineScope.socketReader(): ReceiveChannel<RawResponse> = produce {
+        while (isActive) {
+            try {
+                val inputStream = RencodeInputStream(InflaterInputStream(socket.inputStream))
+                send(RawResponse(inputStream.readList()))
+            } catch (ex: IOException) {
+                // TODO: log
+                if (!closed) {
+                    throw ex
                 }
             }
         }
-    }
-
-    /**
-     * Writes the [RawRequest] to the socket.
-     */
-    suspend fun write(rawRequest: RawRequest) {
-        writeChannel.send(rawRequest)
-    }
-
-    override fun close() {
-        closed = true
-        writeChannel.cancel()
-        job.cancel()
-        socket.close()
     }
 }
 

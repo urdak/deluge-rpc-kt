@@ -67,7 +67,7 @@ class DelugeSocketTest {
         }
         serverOutput.write(baos.toByteArray())
         val response = runBlocking {
-            socket.inputProcessor.receive()
+            socket.reader.receive()
         }
         Assertions.assertEquals(rawResponse, response)
     }.also {
@@ -85,7 +85,7 @@ class DelugeSocketTest {
         serverOutput.write(2)
         Assertions.assertThrows(ZipException::class.java) {
             runBlocking {
-                socket.inputProcessor.receive()
+                socket.reader.receive()
             }
         }
     }.let {

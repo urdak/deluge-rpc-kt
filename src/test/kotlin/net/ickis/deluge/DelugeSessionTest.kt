@@ -37,7 +37,7 @@ class DelugeSessionTest {
         val exBacktrace = "backtrace1\nbacktrace2"
         val response2 = RawResponse(listOf(2, 1, listOf(exType, exMsg, exBacktrace)))
         val response3 = RawResponse(listOf(1, 2, true))
-        every { socket.inputProcessor } returns inputProcessorMock
+        every { socket.reader } returns inputProcessorMock
         coEvery {
             socket.write(RawRequest(request1.serialize(0)))
         } coAnswers { testChan.send(response1) }
