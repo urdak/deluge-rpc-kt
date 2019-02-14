@@ -1,31 +1,59 @@
 package net.ickis.deluge.api
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
-import net.ickis.deluge.DelugeSession
-import net.ickis.deluge.request.*
+import net.ickis.deluge.request.Request
 import java.io.Closeable
 import java.net.URL
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
-class DelugeJavaClient private constructor(
-        private val session: DelugeSession
-) : Closeable by session {
+/**
+ * @see [DelugeClient]
+ */
+class DelugeJavaClient private constructor(private val client: DelugeClient) : Closeable by client {
     @JvmOverloads
     constructor(address: String,
-                port: Int = 58846,
+                port: Int = DEFAULT_DELUGE_PORT,
                 username: String,
                 password: String
-    ) : this(DelugeSession(address, port)) {
-        runBlocking { session.request(LoginRequest(username, password)) }
-    }
+    ) : this(DelugeClient(address, port, username, password))
 
-    fun <T> request(request: Request<T>): CompletableFuture<T> = runBlocking { future { session.request(request) } }
-    fun addTorrent(magnetLink: String) = request(TorrentMagnetRequest(magnetLink))
-    fun addTorrent(url: URL) = request(TorrentURLRequest(url))
-    fun addTorrent(path: Path) = request(TorrentPathRequest(path))
-    fun removeTorrent(torrentId: String, removeData: Boolean) = request(RemoveTorrents(torrentId, removeData))
-    fun getTorrentStatus(torrentId: String) = request(TorrentStatus(torrentId)).thenApply(::Torrent)!!
-    fun getFreeSpace() = request(FreeSpace)
+    /**
+     * @see [DelugeClient.request]
+     */
+    fun <T> request(request: Request<T>): CompletableFuture<T> = blockingFuture { client.request(request) }
+
+    /**
+     * @see [DelugeClient.addTorrent]
+     */
+    fun addTorrent(magnetLink: String) = blockingFuture { client.addTorrent(magnetLink) }
+
+    /**
+     * @see [DelugeClient.addTorrent]
+     */
+    fun addTorrent(url: URL) = blockingFuture { client.addTorrent(url) }
+
+    /**
+     * @see [DelugeClient.addTorrent]
+     */
+    fun addTorrent(path: Path) = blockingFuture { client.addTorrent(path) }
+
+    /**
+     * @see [DelugeClient.removeTorrent]
+     */
+    fun removeTorrent(torrentId: String, removeData: Boolean) = blockingFuture { client.removeTorrent(torrentId, removeData) }
+
+    /**
+     * @see [DelugeClient.getTorrentStatus]
+     */
+    fun getTorrentStatus(torrentId: String) = blockingFuture { client.getTorrentStatus(torrentId) }
+
+    /**
+     * @see [DelugeClient.getFreeSpace]
+     */
+    fun getFreeSpace() = blockingFuture { client.getFreeSpace() }
+
+    private inline fun <T> blockingFuture(crossinline block: suspend CoroutineScope.() -> T) = runBlocking { future { block() } }
 }
