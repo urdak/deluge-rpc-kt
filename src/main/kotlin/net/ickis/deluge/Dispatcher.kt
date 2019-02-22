@@ -8,7 +8,7 @@ import net.ickis.deluge.net.RawRequest
 import net.ickis.deluge.request.Request
 import java.util.HashMap
 
-internal sealed class DelugeEvent {
+internal sealed class DispatcherEvent {
     /**
      * An outgoing request event, containing the [request] data, as well as the [deferred] that is responsible for
      * producing a result for the [request].
@@ -16,14 +16,14 @@ internal sealed class DelugeEvent {
     internal data class Outgoing<T>(
             val request: Request<T>,
             val deferred: CompletableDeferred<T>
-    ) : DelugeEvent() {
+    ) : DispatcherEvent() {
         fun serialize(id: Int) = RawRequest(request.serialize(id))
     }
 
     /**
      * An incoming response event, containing the parsed [response] that is received from the daemon.
      */
-    internal data class Incoming(val response: DelugeResponse) : DelugeEvent() {
+    internal data class Incoming(val response: DelugeResponse) : DispatcherEvent() {
         fun process(outgoing: Outgoing<*>) {
             when (response) {
                 is DelugeResponse.Value -> {
@@ -43,20 +43,21 @@ internal sealed class DelugeEvent {
     }
 }
 
-internal fun CoroutineScope.eventHandler(socket: DelugeSocket) = actor<DelugeEvent> {
-    val requests = HashMap<Int, DelugeEvent.Outgoing<*>>()
+internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherEvent> {
+    val activeEvents = HashMap<Int, DispatcherEvent.Outgoing<*>>()
     var counter = 0
     for (event in channel) {
-        when (event) {
-            is DelugeEvent.Outgoing<*> -> {
+        @Suppress("UNUSED_VARIABLE")
+        val exhaustive = when (event) {
+            is DispatcherEvent.Outgoing<*> -> {
                 val id = counter++
-                requests[id] = event
+                activeEvents[id] = event
                 socket.write(event.serialize(id))
             }
-            is DelugeEvent.Incoming -> {
-                val request = requests.remove(event.response.requestId)
-                if (request != null) {
-                    event.process(request)
+            is DispatcherEvent.Incoming -> {
+                val currentEvent = activeEvents.remove(event.response.requestId)
+                if (currentEvent != null) {
+                    event.process(currentEvent)
                 } else {
                     TODO("LOG ME")
                 }
