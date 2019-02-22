@@ -70,10 +70,7 @@ class DelugeClient private constructor(
      * @return the information about the torrent.
      * @see [Torrent]
      */
-    suspend fun getTorrentStatus(torrentId: String): Torrent {
-        val map = request(TorrentStatus(torrentId))
-        return Torrent(map)
-    }
+    suspend fun getTorrentStatus(torrentId: String): Torrent = request(TorrentStatus(torrentId))
 
     /**
      * Retrieves the number of free bytes in the default download location.

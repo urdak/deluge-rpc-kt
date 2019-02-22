@@ -5,7 +5,7 @@ package net.ickis.deluge.request
  */
 class TorrentMagnetRequest(
         private val magnetLink: String
-) : Request<String>("core.add_torrent_magnet") {
+) : SimpleRequest<String>("core.add_torrent_magnet") {
     override val args: List<Any>
         get() = listOf(magnetLink, emptyMap<String, String>())
 }

@@ -9,7 +9,7 @@ import java.util.*
  */
 class TorrentPathRequest(
         private val path: Path
-) : Request<String>("core.add_torrent_file") {
+) : SimpleRequest<String>("core.add_torrent_file") {
     override val args: List<Any>
         get() = listOf(
                 path.fileName.toString(),

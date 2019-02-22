@@ -24,14 +24,19 @@ internal sealed class DelugeEvent {
      * An incoming response event, containing the parsed [response] that is received from the daemon.
      */
     internal data class Incoming(val response: DelugeResponse) : DelugeEvent() {
-        fun process(deferred: CompletableDeferred<*>) {
+        fun process(outgoing: Outgoing<*>) {
             when (response) {
                 is DelugeResponse.Value -> {
-                    @Suppress("UNCHECKED_CAST")
-                    deferred as CompletableDeferred<Any>
-                    deferred.complete(response.value)
+                    try {
+                        val responseValue = outgoing.request.createResponse(response.value)
+                        @Suppress("UNCHECKED_CAST")
+                        val deferred = outgoing.deferred as CompletableDeferred<Any?>
+                        deferred.complete(responseValue)
+                    } catch (ex: Exception) {
+                        outgoing.deferred.completeExceptionally(ex)
+                    }
                 }
-                is DelugeResponse.Error -> deferred.completeExceptionally(response.exception)
+                is DelugeResponse.Error -> outgoing.deferred.completeExceptionally(response.exception)
                 is DelugeResponse.Event -> TODO("HANDLE EVENTS ${response.value}")
             }
         }
@@ -39,13 +44,13 @@ internal sealed class DelugeEvent {
 }
 
 internal fun CoroutineScope.eventHandler(socket: DelugeSocket) = actor<DelugeEvent> {
-    val requests = HashMap<Int, CompletableDeferred<*>>()
+    val requests = HashMap<Int, DelugeEvent.Outgoing<*>>()
     var counter = 0
     for (event in channel) {
         when (event) {
             is DelugeEvent.Outgoing<*> -> {
                 val id = counter++
-                requests[id] = event.deferred
+                requests[id] = event
                 socket.write(event.serialize(id))
             }
             is DelugeEvent.Incoming -> {

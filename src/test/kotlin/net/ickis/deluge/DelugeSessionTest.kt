@@ -9,6 +9,7 @@ import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.RawResponse
 import net.ickis.deluge.net.RawRequest
 import net.ickis.deluge.request.Request
+import net.ickis.deluge.request.SimpleRequest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
@@ -23,7 +24,7 @@ class DelugeSessionTest {
     class TestRequest<T>(method: String,
                          override val args: List<Any>,
                          override val kwargs: Map<Any, Any>
-    ) : Request<T>(method)
+    ) : SimpleRequest<T>(method)
 
     @Test
     fun `Verify that all message types are parsed and the session stays alive`() {
