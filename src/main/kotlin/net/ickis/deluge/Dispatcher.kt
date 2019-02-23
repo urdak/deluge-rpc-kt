@@ -6,7 +6,11 @@ import kotlinx.coroutines.channels.actor
 import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.RawRequest
 import net.ickis.deluge.request.Request
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.util.HashMap
+
+private val logger: Logger = LogManager.getLogger()
 
 internal sealed class DispatcherEvent {
     /**
@@ -30,6 +34,7 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
     val activeEvents = HashMap<Int, DispatcherEvent.Outgoing<*>>()
     var counter = 0
     for (event in channel) {
+        logger.info("Processing $event")
         when (event) {
             is DispatcherEvent.Outgoing<*> -> {
                 val id = counter++
@@ -50,7 +55,7 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
                                 activeEvent.deferred.completeExceptionally(ex)
                             }
                         } else {
-                            TODO("LOG ME")
+                            logger.warn("Received $response not found in local cache")
                         }
                     }
                     is DelugeResponse.Error -> {
@@ -58,7 +63,7 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
                         if (activeEvent != null) {
                             activeEvent.deferred.completeExceptionally(response.exception)
                         } else {
-                            TODO("LOG ME")
+                            logger.warn("Received $response not found in local cache")
                         }
                     }
                     is DelugeResponse.Event -> TODO("Handle events")

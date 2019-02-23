@@ -4,13 +4,18 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import net.ickis.deluge.exceptionHandler
 import net.ickis.rencode.RencodeInputStream
 import net.ickis.rencode.RencodeOutputStream
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.io.Closeable
 import java.io.IOException
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream
 import javax.net.ssl.SSLSocket
+
+private val logger: Logger = LogManager.getLogger()
 
 /**
  * Writes [RawRequest]'s to the [SSLSocket] in the expected format.
@@ -19,7 +24,7 @@ import javax.net.ssl.SSLSocket
 internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Closeable {
     private var closed = false
     private val job = Job()
-    override val coroutineContext = Dispatchers.IO + job
+    override val coroutineContext = Dispatchers.IO + job + exceptionHandler(logger)
     private val writer: Channel<RawRequest> by lazy { socketWriter() }
     val reader: ReceiveChannel<RawResponse> by lazy { socketReader() }
 
@@ -50,7 +55,6 @@ internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Clo
                     outputStream.writeList(request.data)
                     outputStream.flush()
                 } catch (ex: IOException) {
-                    // TODO: log
                     if (!closed) {
                         throw ex
                     }
@@ -69,7 +73,6 @@ internal class DelugeSocket(private val socket: SSLSocket) : CoroutineScope, Clo
                 val inputStream = RencodeInputStream(InflaterInputStream(socket.inputStream))
                 send(RawResponse(inputStream.readList()))
             } catch (ex: IOException) {
-                // TODO: log
                 if (!closed) {
                     throw ex
                 }

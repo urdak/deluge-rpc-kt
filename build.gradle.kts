@@ -24,12 +24,15 @@ allprojects {
 
 extra["coroutinesVersion"] = "1.1.1"
 val junitVersion = "5.4.0"
+val log4jVersion = "2.11.2"
 
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${extra["coroutinesVersion"]}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${extra["coroutinesVersion"]}")
     implementation("net.ickis:rencode-kt:1.0")
+    implementation("org.apache.logging.log4j:log4j-api:$log4jVersion")
+    runtime("org.apache.logging.log4j:log4j-core:$log4jVersion")
     testImplementation("io.mockk:mockk:1.9.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
     testRuntime("org.junit.jupiter:junit-jupiter-engine:$junitVersion")

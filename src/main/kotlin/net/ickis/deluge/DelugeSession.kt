@@ -4,8 +4,11 @@ import kotlinx.coroutines.*
 import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.SocketFactory
 import net.ickis.deluge.request.Request
+import org.apache.logging.log4j.LogManager
 import java.io.Closeable
 import java.io.IOException
+
+private val logger = LogManager.getLogger(DelugeSession::class.java)
 
 /**
  * Creates a socket connection to the Deluge daemon. Sets up an actor [dispatcher] to keep track of Deluge events.
@@ -17,7 +20,7 @@ internal class DelugeSession(
             : this(DelugeSocket(SocketFactory.createSocket(address, port)))
 
     private val job = Job()
-    override val coroutineContext = Dispatchers.Default + job
+    override val coroutineContext = Dispatchers.Default + job + exceptionHandler(logger)
     /**
      * Maintains the status of active requests. Processes incoming and outgoing events.
      */
@@ -32,7 +35,7 @@ internal class DelugeSession(
                 try {
                     dispatcher.send(DispatcherEvent.Incoming(DelugeResponse.create(raw)))
                 } catch (ex: IOException) {
-                    // TODO: handle Response::create here?
+                    logger.error("Failed to create Deluge response from $raw", ex)
                 }
             }
         }
