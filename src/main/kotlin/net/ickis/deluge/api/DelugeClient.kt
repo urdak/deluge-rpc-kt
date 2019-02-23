@@ -44,19 +44,19 @@ class DelugeClient private constructor(
      * Adds a torrent using the provided [magnetLink].
      * @return id of the torrent.
      */
-    suspend fun addTorrent(magnetLink: String): String = request(TorrentMagnetRequest(magnetLink))
+    suspend fun addTorrent(magnetLink: String): String? = request(TorrentMagnetRequest(magnetLink))
 
     /**
      * Adds a torrent using the provided [url] of the torrent file.
      * @return id of the torrent.
      */
-    suspend fun addTorrent(url: URL): String = request(TorrentURLRequest(url))
+    suspend fun addTorrent(url: URL): String? = request(TorrentURLRequest(url))
 
     /**
      * Adds a torrent using the provided local [path] of the torrent file.
      * @return id of the torrent.
      */
-    suspend fun addTorrent(path: Path): String = request(TorrentPathRequest(path))
+    suspend fun addTorrent(path: Path): String? = request(TorrentPathRequest(path))
 
     /**
      * Removes the torrent with the specified [torrentId]. Removes the data based on the value of [removeData].

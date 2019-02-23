@@ -40,14 +40,13 @@ internal sealed class DelugeResponse {
     /**
      * Represents a value response from the daemon.
      */
-    internal data class Value(val requestId: Int, val value: Any) : DelugeResponse() {
+    internal data class Value(val requestId: Int, val value: Any?) : DelugeResponse() {
         companion object {
             fun create(list: List<*>): Value {
                 list.requireSize(3)
                 val requestId = (list[1] as? Number)?.toInt()
                         ?: throw IOException("Expected a number request id, but got ${list[1]}")
                 val value = list[2]
-                        ?: throw IOException("Response with id $requestId returned a null value")
                 return Value(requestId, value)
             }
         }
@@ -63,7 +62,7 @@ internal sealed class DelugeResponse {
         companion object {
             fun create(list: List<*>): Error {
                 val value = Value.create(list)
-                return Error.fromAny(value.requestId, value.value)
+                return Error.fromAny(value.requestId, value.value ?: "Unknown error")
             }
 
             private fun fromMessage(requestId: Int, message: String) = Error(requestId, DelugeException(
