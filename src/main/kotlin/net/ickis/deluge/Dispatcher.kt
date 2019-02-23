@@ -23,43 +23,45 @@ internal sealed class DispatcherEvent {
     /**
      * An incoming response event, containing the parsed [response] that is received from the daemon.
      */
-    internal data class Incoming(val response: DelugeResponse) : DispatcherEvent() {
-        fun process(outgoing: Outgoing<*>) {
-            when (response) {
-                is DelugeResponse.Value -> {
-                    try {
-                        val responseValue = outgoing.request.createResponse(response.value)
-                        @Suppress("UNCHECKED_CAST")
-                        val deferred = outgoing.deferred as CompletableDeferred<Any?>
-                        deferred.complete(responseValue)
-                    } catch (ex: Exception) {
-                        outgoing.deferred.completeExceptionally(ex)
-                    }
-                }
-                is DelugeResponse.Error -> outgoing.deferred.completeExceptionally(response.exception)
-                is DelugeResponse.Event -> TODO("HANDLE EVENTS ${response.value}")
-            }
-        }
-    }
+    internal data class Incoming(val response: DelugeResponse) : DispatcherEvent()
 }
 
 internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherEvent> {
     val activeEvents = HashMap<Int, DispatcherEvent.Outgoing<*>>()
     var counter = 0
     for (event in channel) {
-        @Suppress("UNUSED_VARIABLE")
-        val exhaustive = when (event) {
+        when (event) {
             is DispatcherEvent.Outgoing<*> -> {
                 val id = counter++
                 activeEvents[id] = event
                 socket.write(event.serialize(id))
             }
             is DispatcherEvent.Incoming -> {
-                val currentEvent = activeEvents.remove(event.response.requestId)
-                if (currentEvent != null) {
-                    event.process(currentEvent)
-                } else {
-                    TODO("LOG ME")
+                when (val response = event.response) {
+                    is DelugeResponse.Value -> {
+                        val activeEvent = activeEvents.remove(response.requestId)
+                        if (activeEvent != null) {
+                            try {
+                                val responseValue = activeEvent.request.createResponse(response.value)
+                                @Suppress("UNCHECKED_CAST")
+                                val deferred = activeEvent.deferred as CompletableDeferred<Any?>
+                                deferred.complete(responseValue)
+                            } catch (ex: Exception) {
+                                activeEvent.deferred.completeExceptionally(ex)
+                            }
+                        } else {
+                            TODO("LOG ME")
+                        }
+                    }
+                    is DelugeResponse.Error -> {
+                        val activeEvent = activeEvents.remove(response.requestId)
+                        if (activeEvent != null) {
+                            activeEvent.deferred.completeExceptionally(response.exception)
+                        } else {
+                            TODO("LOG ME")
+                        }
+                    }
+                    is DelugeResponse.Event -> TODO("Handle events")
                 }
             }
         }
