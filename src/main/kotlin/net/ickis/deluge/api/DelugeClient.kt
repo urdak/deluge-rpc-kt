@@ -1,7 +1,9 @@
 package net.ickis.deluge.api
 
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.runBlocking
 import net.ickis.deluge.DelugeSession
+import net.ickis.deluge.event.DelugeEvent
 import net.ickis.deluge.request.*
 import java.io.Closeable
 import java.net.URL
@@ -36,9 +38,14 @@ class DelugeClient private constructor(
      * Sends a [Request] to the Deluge daemon and suspends until a reply is received and processed by the client.
      * Additional requests can be added to the client referencing the <a href="https://deluge.readthedocs.io/en/develop/reference/api.html">Deluge RPC API</a>.
      */
-    suspend fun <T> request(request: Request<T>): T {
-        return session.request(request)
-    }
+    suspend fun <T> request(request: Request<T>): T = session.request(request)
+
+    /**
+     * Subscribes to an event, which is emitted by the daemon. The caller is responsible for closing the [ReceiveChannel].
+     * @param T The type of the notification emitted by the channel.
+     * @return [ReceiveChannel] that emits notifications specified by the [DelugeEvent]
+     */
+    suspend fun <T> subscribe(event: DelugeEvent<T>): ReceiveChannel<T> = session.subscribe(event)
 
     /**
      * Adds a torrent using the provided [magnetLink].

@@ -1,13 +1,16 @@
 package net.ickis.deluge.api
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
+import net.ickis.deluge.event.DelugeEvent
 import net.ickis.deluge.request.Request
 import java.io.Closeable
 import java.net.URL
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.function.Consumer
 
 /**
  * @see [DelugeClient]
@@ -24,6 +27,15 @@ class DelugeJavaClient private constructor(private val client: DelugeClient) : C
      * @see [DelugeClient.request]
      */
     fun <T> request(request: Request<T>): CompletableFuture<T> = blockingFuture { client.request(request) }
+
+    /**
+     * @see [DelugeClient.subscribe]
+     */
+    fun <T> subscribe(event: DelugeEvent<T>, consumer: Consumer<T>) = runBlocking {
+        client.subscribe(event).consumeEach {
+            consumer.accept(it)
+        }
+    }
 
     /**
      * @see [DelugeClient.addTorrent]

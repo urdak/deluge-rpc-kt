@@ -2,9 +2,11 @@ package net.ickis.deluge
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
 import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.RawRequest
+import net.ickis.deluge.request.EventRequest
 import net.ickis.deluge.request.Request
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -17,21 +19,27 @@ internal sealed class DispatcherEvent {
      * An outgoing request event, containing the [request] data, as well as the [deferred] that is responsible for
      * producing a result for the [request].
      */
-    internal data class Outgoing<T>(
+    data class Outgoing<T>(
             val request: Request<T>,
             val deferred: CompletableDeferred<T>
     ) : DispatcherEvent() {
         fun serialize(id: Int) = RawRequest(request.serialize(id))
     }
 
+    data class Subscription<T>(
+            val request: EventRequest,
+            val channel: Channel<T>
+    ): DispatcherEvent()
+
     /**
      * An incoming response event, containing the parsed [response] that is received from the daemon.
      */
-    internal data class Incoming(val response: DelugeResponse) : DispatcherEvent()
+    data class Incoming(val response: DelugeResponse) : DispatcherEvent()
 }
 
 internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherEvent> {
     val activeEvents = HashMap<Int, DispatcherEvent.Outgoing<*>>()
+    val activeSubscriptions = HashMap<String, MutableList<DispatcherEvent.Subscription<*>>>()
     var counter = 0
     for (event in channel) {
         logger.info("Processing $event")
@@ -40,6 +48,9 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
                 val id = counter++
                 activeEvents[id] = event
                 socket.write(event.serialize(id))
+            }
+            is DispatcherEvent.Subscription<*> -> {
+                activeSubscriptions.computeIfAbsent(event.request.event.name) { ArrayList() }.add(event)
             }
             is DispatcherEvent.Incoming -> {
                 when (val response = event.response) {
@@ -66,7 +77,23 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
                             logger.warn("Received $response not found in local cache")
                         }
                     }
-                    is DelugeResponse.Event -> TODO("Handle events")
+                    is DelugeResponse.Event -> {
+                        val subscriptions = activeSubscriptions[response.eventName]
+                        if (subscriptions != null) {
+                            val iterator = subscriptions.iterator()
+                            while (iterator.hasNext()) {
+                                val subscription = iterator.next()
+                                if (subscription.channel.isClosedForReceive) {
+                                    iterator.remove()
+                                    continue
+                                }
+                                val notification: Any? = subscription.request.event.createNotification(response.value)
+                                @Suppress("UNCHECKED_CAST")
+                                val channel = subscription.channel as Channel<Any?>
+                                channel.send(notification)
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -1,5 +1,7 @@
 package net.ickis.deluge.request
 
+import net.ickis.deluge.event.DelugeEvent
+
 /**
  * Base class for requests that can be sent to the daemon using the [net.ickis.deluge.api.DelugeClient].
  * @param method The method that is called on the Deluge daemon.
@@ -31,10 +33,17 @@ abstract class Request<T>(private val method: String) {
 }
 
 /**
- *Request that processes the response raw value by casting it to the response type.
+ * Request that processes the response raw value by casting it to the response type.
  * @see [Request]
  */
 abstract class SimpleRequest<T>(method: String) : Request<T>(method) {
     @Suppress("UNCHECKED_CAST")
     override fun createResponse(rawValue: Any?) = rawValue as T
+}
+
+/**
+ * Request that is used to subscribe to an event that can be emitted by the daemon.
+ */
+internal data class EventRequest(val event: DelugeEvent<*>) : SimpleRequest<Boolean>("daemon.set_event_interest") {
+    override val args = listOf(listOf(event.name))
 }

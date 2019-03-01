@@ -7,7 +7,7 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "net.ickis"
-version = "0.1-SNAPSHOT"
+version = "0.2-SNAPSHOT"
 
 plugins {
     kotlin("jvm") version "1.3.20"
