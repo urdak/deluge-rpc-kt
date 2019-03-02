@@ -4,15 +4,16 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
+import mu.KotlinLogging
 import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.RawRequest
 import net.ickis.deluge.request.EventRequest
 import net.ickis.deluge.request.Request
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
 import java.util.HashMap
+import kotlin.collections.ArrayList
+import kotlin.collections.set
 
-private val logger: Logger = LogManager.getLogger()
+private val logger = KotlinLogging.logger {}
 
 internal sealed class DispatcherEvent {
     /**
@@ -42,14 +43,19 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
     val activeSubscriptions = HashMap<String, MutableList<DispatcherEvent.Subscription<*>>>()
     var counter = 0
     for (event in channel) {
-        logger.info("Processing $event")
+        logger.info { "Processing $event" }
         when (event) {
             is DispatcherEvent.Outgoing<*> -> {
                 val id = counter++
+                val rawRequest = event.serialize(id)
+                logger.debug { "Send request $rawRequest with id $id" }
                 activeEvents[id] = event
-                socket.write(event.serialize(id))
+                socket.write(rawRequest)
             }
             is DispatcherEvent.Subscription<*> -> {
+                logger.debug {
+                    "Subscribing to event ${event.request.event.name} (${event.request.event::class.java.canonicalName})"
+                }
                 activeSubscriptions.computeIfAbsent(event.request.event.name) { ArrayList() }.add(event)
             }
             is DispatcherEvent.Incoming -> {
@@ -66,7 +72,7 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
                                 activeEvent.deferred.completeExceptionally(ex)
                             }
                         } else {
-                            logger.warn("Received $response not found in local cache")
+                            logger.warn { "Received $response not found in local cache" }
                         }
                     }
                     is DelugeResponse.Error -> {
@@ -74,7 +80,7 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
                         if (activeEvent != null) {
                             activeEvent.deferred.completeExceptionally(response.exception)
                         } else {
-                            logger.warn("Received $response not found in local cache")
+                            logger.warn { "Received $response not found in local cache" }
                         }
                     }
                     is DelugeResponse.Event -> {
@@ -84,6 +90,9 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherE
                             while (iterator.hasNext()) {
                                 val subscription = iterator.next()
                                 if (subscription.channel.isClosedForReceive) {
+                                    logger.debug {
+                                        "Remove ${subscription.request.event::class.java.canonicalName} - channel closed by client"
+                                    }
                                     iterator.remove()
                                     continue
                                 }

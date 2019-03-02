@@ -3,16 +3,16 @@ package net.ickis.deluge
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import mu.KotlinLogging
 import net.ickis.deluge.event.DelugeEvent
 import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.SocketFactory
 import net.ickis.deluge.request.EventRequest
 import net.ickis.deluge.request.Request
-import org.apache.logging.log4j.LogManager
 import java.io.Closeable
 import java.io.IOException
 
-private val logger = LogManager.getLogger(DelugeSession::class.java)
+private val logger = KotlinLogging.logger {}
 
 /**
  * Creates a socket connection to the Deluge daemon. Sets up an actor [dispatcher] to keep track of Deluge events.

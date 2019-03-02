@@ -4,18 +4,17 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import mu.KotlinLogging
 import net.ickis.deluge.exceptionHandler
 import net.ickis.rencode.RencodeInputStream
 import net.ickis.rencode.RencodeOutputStream
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
 import java.io.Closeable
 import java.io.IOException
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream
 import javax.net.ssl.SSLSocket
 
-private val logger: Logger = LogManager.getLogger()
+private val logger = KotlinLogging.logger {}
 
 /**
  * Writes [RawRequest]'s to the [SSLSocket] in the expected format.
