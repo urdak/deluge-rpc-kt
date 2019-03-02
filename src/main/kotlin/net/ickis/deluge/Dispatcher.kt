@@ -15,76 +15,76 @@ import kotlin.collections.set
 
 private val logger = KotlinLogging.logger {}
 
-internal sealed class DispatcherEvent {
+internal sealed class DispatcherCommand {
     /**
      * An outgoing request event, containing the [request] data, as well as the [deferred] that is responsible for
      * producing a result for the [request].
      */
-    data class Outgoing<T>(
+    data class Send<T>(
             val request: Request<T>,
             val deferred: CompletableDeferred<T>
-    ) : DispatcherEvent() {
+    ) : DispatcherCommand() {
         fun serialize(id: Int) = RawRequest(request.serialize(id))
     }
 
-    data class Subscription<T>(
+    data class Subscribe<T>(
             val request: EventRequest,
             val channel: Channel<T>
-    ): DispatcherEvent()
+    ): DispatcherCommand()
 
     /**
      * An incoming response event, containing the parsed [response] that is received from the daemon.
      */
-    data class Incoming(val response: DelugeResponse) : DispatcherEvent()
+    data class Receive(val response: DelugeResponse) : DispatcherCommand()
 }
 
-internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherEvent> {
-    val activeEvents = HashMap<Int, DispatcherEvent.Outgoing<*>>()
-    val activeSubscriptions = HashMap<String, MutableList<DispatcherEvent.Subscription<*>>>()
+internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherCommand> {
+    val sentMap = HashMap<Int, DispatcherCommand.Send<*>>()
+    val subscribedMap = HashMap<String, MutableList<DispatcherCommand.Subscribe<*>>>()
     var counter = 0
-    for (event in channel) {
-        logger.info { "Processing $event" }
-        when (event) {
-            is DispatcherEvent.Outgoing<*> -> {
+    for (command in channel) {
+        logger.info { "Processing $command" }
+        when (command) {
+            is DispatcherCommand.Send<*> -> {
                 val id = counter++
-                val rawRequest = event.serialize(id)
+                val rawRequest = command.serialize(id)
                 logger.debug { "Send request $rawRequest with id $id" }
-                activeEvents[id] = event
+                sentMap[id] = command
                 socket.write(rawRequest)
             }
-            is DispatcherEvent.Subscription<*> -> {
+            is DispatcherCommand.Subscribe<*> -> {
                 logger.debug {
-                    "Subscribing to event ${event.request.event.name} (${event.request.event::class.java.canonicalName})"
+                    "Subscribing to event ${command.request.event.name} (${command.request.event::class.java.canonicalName})"
                 }
-                activeSubscriptions.computeIfAbsent(event.request.event.name) { ArrayList() }.add(event)
+                subscribedMap.computeIfAbsent(command.request.event.name) { ArrayList() }.add(command)
             }
-            is DispatcherEvent.Incoming -> {
-                when (val response = event.response) {
+            is DispatcherCommand.Receive -> {
+                when (val response = command.response) {
                     is DelugeResponse.Value -> {
-                        val activeEvent = activeEvents.remove(response.requestId)
-                        if (activeEvent != null) {
+                        val sendCommand = sentMap.remove(response.requestId)
+                        if (sendCommand != null) {
                             try {
-                                val responseValue = activeEvent.request.createResponse(response.value)
+                                val responseValue = sendCommand.request.createResponse(response.value)
                                 @Suppress("UNCHECKED_CAST")
-                                val deferred = activeEvent.deferred as CompletableDeferred<Any?>
+                                val deferred = sendCommand.deferred as CompletableDeferred<Any?>
                                 deferred.complete(responseValue)
                             } catch (ex: Exception) {
-                                activeEvent.deferred.completeExceptionally(ex)
+                                sendCommand.deferred.completeExceptionally(ex)
                             }
                         } else {
                             logger.warn { "Received $response not found in local cache" }
                         }
                     }
                     is DelugeResponse.Error -> {
-                        val activeEvent = activeEvents.remove(response.requestId)
-                        if (activeEvent != null) {
-                            activeEvent.deferred.completeExceptionally(response.exception)
+                        val sendCommand = sentMap.remove(response.requestId)
+                        if (sendCommand != null) {
+                            sendCommand.deferred.completeExceptionally(response.exception)
                         } else {
                             logger.warn { "Received $response not found in local cache" }
                         }
                     }
                     is DelugeResponse.Event -> {
-                        val subscriptions = activeSubscriptions[response.eventName]
+                        val subscriptions = subscribedMap[response.eventName]
                         if (subscriptions != null) {
                             val iterator = subscriptions.iterator()
                             while (iterator.hasNext()) {

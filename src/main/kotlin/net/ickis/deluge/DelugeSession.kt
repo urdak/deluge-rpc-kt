@@ -15,7 +15,7 @@ import java.io.IOException
 private val logger = KotlinLogging.logger {}
 
 /**
- * Creates a socket connection to the Deluge daemon. Sets up an actor [dispatcher] to keep track of Deluge events.
+ * Creates a socket connection to the Deluge daemon. Sets up an actor [dispatcher] that processes the daemon data.
  */
 internal class DelugeSession(
         private val socket: DelugeSocket
@@ -26,18 +26,18 @@ internal class DelugeSession(
     private val job = Job()
     override val coroutineContext = Dispatchers.Default + job + exceptionHandler(logger)
     /**
-     * Maintains the status of active requests. Processes incoming and outgoing events.
+     * Maintains the status of active requests.
      */
     private val dispatcher = dispatcher(socket)
 
     /**
-     * Sets up a coroutine to process socket input and create [DelugeEvent.Incoming] for the [messageHandler].
+     * Sets up a coroutine to process socket input and create dispatcher receive commands.
      */
     init {
         launch {
             for (raw in socket.reader) {
                 try {
-                    dispatcher.send(DispatcherEvent.Incoming(DelugeResponse.create(raw)))
+                    dispatcher.send(DispatcherCommand.Receive(DelugeResponse.create(raw)))
                 } catch (ex: IOException) {
                     logger.error("Failed to create Deluge response from $raw", ex)
                 }
@@ -46,24 +46,24 @@ internal class DelugeSession(
     }
 
     /**
-     * Creates a new request [DispatcherEvent.Outgoing] for the [dispatcher]. Suspends until the [dispatcher]
-     * receives a [DispatcherEvent.Incoming] with the response for the specified request.
+     * Creates a new request [DispatcherCommand.Send] for the [dispatcher]. Suspends until the [dispatcher]
+     * receives a [DispatcherCommand.Receive] with the response for the specified request.
      */
     suspend fun <T> request(request: Request<T>): T {
-        val outgoing = DispatcherEvent.Outgoing(request, CompletableDeferred(SupervisorJob(job)))
+        val outgoing = DispatcherCommand.Send(request, CompletableDeferred(SupervisorJob(job)))
         dispatcher.send(outgoing)
         return outgoing.deferred.await()
     }
 
     /**
-     * Sends an [EventRequest] using [request] and, if the request is successful, sends a [DispatcherEvent.Subscription]
+     * Sends an [EventRequest] using [request] and, if the request is successful, sends a [DispatcherCommand.Subscribe]
      * to the [dispatcher]. Provides a channel that can be consumed to receive notifications from the subscription.
      */
     suspend fun <T> subscribe(event: DelugeEvent<T>): ReceiveChannel<T> {
         val eventRequest = EventRequest(event)
         val successful = request(eventRequest)
         if (!successful) throw DelugeException(message = "Failed to subscribe to event ${event.name}")
-        val subscription = DispatcherEvent.Subscription(eventRequest, Channel<T>(Channel.UNLIMITED))
+        val subscription = DispatcherCommand.Subscribe(eventRequest, Channel<T>(Channel.UNLIMITED))
         dispatcher.send(subscription)
         return subscription.channel
     }
