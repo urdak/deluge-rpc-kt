@@ -53,6 +53,7 @@ class DelugeSocketTest {
     }.also {
         verifySequence {
             sslSocket.outputStream
+            // TODO: sslSocket.inputStream also in sequence depending on timing, causes test failure
             sslSocket.close()
         }
     }
