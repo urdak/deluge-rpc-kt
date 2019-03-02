@@ -9,8 +9,7 @@ import net.ickis.deluge.net.DelugeSocket
 import net.ickis.deluge.net.RawRequest
 import net.ickis.deluge.request.EventRequest
 import net.ickis.deluge.request.Request
-import java.util.HashMap
-import kotlin.collections.ArrayList
+import java.util.*
 import kotlin.collections.set
 
 private val logger = KotlinLogging.logger {}
@@ -41,11 +40,13 @@ internal data class Subscribe<T>(
         val request: EventRequest,
         val channel: Channel<T>
 ): DispatcherCommand() {
-    fun process(subscribedMap: MutableMap<String, MutableList<Subscribe<*>>>) {
+    fun process(subscribedMap: MutableMap<String, List<Subscribe<*>>>) {
         logger.debug {
             "Subscribing to event ${request.event.name} (${request.event::class.java.canonicalName})"
         }
-        subscribedMap.computeIfAbsent(request.event.name) { ArrayList() }.add(this)
+        subscribedMap.compute(request.event.name) { _, v ->
+            if (v == null) listOf(this) else v + this
+        }
     }
 }
 
@@ -55,7 +56,7 @@ internal data class Subscribe<T>(
 internal data class Receive(val response: DelugeResponse) : DispatcherCommand() {
     suspend fun process(
             sentMap: MutableMap<Int, Send<*>>,
-            subscribedMap: MutableMap<String, MutableList<Subscribe<*>>>
+            subscribedMap: MutableMap<String, List<Subscribe<*>>>
     ) {
         when (response) {
             is DelugeResponse.Value -> response.processValue(sentMap)
@@ -89,33 +90,30 @@ internal data class Receive(val response: DelugeResponse) : DispatcherCommand() 
         }
     }
 
-    private suspend fun DelugeResponse.Event.processEvent(subscribedMap: MutableMap<String, MutableList<Subscribe<*>>>) {
+    private suspend fun DelugeResponse.Event.processEvent(subscribedMap: MutableMap<String, List<Subscribe<*>>>) {
         val subscriptions = subscribedMap[eventName]
-        if (subscriptions != null) {
-            val iterator = subscriptions.iterator()
-            while (iterator.hasNext()) {
-                val subscription = iterator.next()
-                if (subscription.channel.isClosedForReceive) {
-                    logger.debug {
-                        "Remove ${subscription.request.event::class.java.canonicalName} - channel closed by client"
-                    }
-                    iterator.remove()
-                    continue
-                }
-                val notification: Any? = subscription.request.event.createNotification(value)
-                @Suppress("UNCHECKED_CAST")
-                val channel = subscription.channel as Channel<Any?>
-                channel.send(notification)
-            }
-        } else {
+        if (subscriptions.isNullOrEmpty()) {
             logger.debug { "No subscriptions for $eventName" }
+            return
+        }
+        subscribedMap[eventName] = subscriptions.filter {
+            if (it.channel.isClosedForReceive) {
+                logger.debug { "Remove ${it.request.event::class.java.canonicalName} - channel closed by client" }
+                false
+            } else {
+                val notification: Any? = it.request.event.createNotification(value)
+                @Suppress("UNCHECKED_CAST")
+                val channel = it.channel as Channel<Any?>
+                channel.send(notification)
+                true
+            }
         }
     }
 }
 
 internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherCommand> {
     val sentMap = HashMap<Int, Send<*>>()
-    val subscribedMap = HashMap<String, MutableList<Subscribe<*>>>()
+    val subscribedMap = HashMap<String, List<Subscribe<*>>>()
     var counter = 0
     for (command in channel) {
         logger.info { "Processing $command" }
@@ -123,6 +121,6 @@ internal fun CoroutineScope.dispatcher(socket: DelugeSocket) = actor<DispatcherC
             is Send<*> -> command.process(socket, counter++, sentMap)
             is Subscribe<*> -> command.process(subscribedMap)
             is Receive -> command.process(sentMap, subscribedMap)
-        }
+        }.exhaustive
     }
 }
