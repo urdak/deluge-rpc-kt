@@ -74,6 +74,7 @@ internal data class Receive(val response: DelugeResponse) : DispatcherCommand() 
                 val deferred = sendCommand.deferred as CompletableDeferred<Any?>
                 deferred.complete(responseValue)
             } catch (ex: Exception) {
+                logger.error(ex) { "Failed to create response from $value" }
                 sendCommand.deferred.completeExceptionally(ex)
             }
         } else {
@@ -101,11 +102,17 @@ internal data class Receive(val response: DelugeResponse) : DispatcherCommand() 
                 logger.debug { "Remove ${it.request.event::class.java.canonicalName} - channel closed by client" }
                 false
             } else {
-                val notification: Any? = it.request.event.createNotification(value)
-                @Suppress("UNCHECKED_CAST")
-                val channel = it.channel as Channel<Any?>
-                channel.send(notification)
-                true
+                try {
+                    val notification: Any? = it.request.event.createNotification(value)
+                    @Suppress("UNCHECKED_CAST")
+                    val channel = it.channel as Channel<Any?>
+                    channel.send(notification)
+                    true
+                } catch (ex: Exception) {
+                    logger.error(ex) { "Failed to create notification from $value" }
+                    it.channel.close(ex)
+                    false
+                }
             }
         }
     }
