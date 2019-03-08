@@ -36,6 +36,7 @@ dependencies {
     runtime("org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion")
     testImplementation("io.mockk:mockk:1.9.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
+    testImplementation("org.hamcrest:hamcrest:2.1")
     testRuntime("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
 }
 
