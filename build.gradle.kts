@@ -6,7 +6,15 @@ import com.jfrog.bintray.gradle.BintrayExtension.VersionConfig
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-group = "net.ickis"
+allprojects {
+    group = "net.ickis"
+    extra["coroutinesVersion"] = "1.1.1"
+
+    repositories {
+        jcenter()
+    }
+}
+
 version = "0.2-SNAPSHOT"
 
 plugins {
@@ -16,20 +24,13 @@ plugins {
     id("org.jetbrains.dokka") version "0.9.17"
 }
 
-allprojects {
-    repositories {
-        jcenter()
-    }
-}
-
-extra["coroutinesVersion"] = "1.1.1"
 val junitVersion = "5.4.0"
 val log4jVersion = "2.11.2"
 
 dependencies {
-    implementation(kotlin("stdlib"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${extra["coroutinesVersion"]}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${extra["coroutinesVersion"]}")
+    api(kotlin("stdlib"))
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${extra["coroutinesVersion"]}")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${extra["coroutinesVersion"]}")
     implementation("net.ickis:rencode-kt:1.0")
     implementation("io.github.microutils:kotlin-logging:1.6.24")
     runtime("org.apache.logging.log4j:log4j-core:$log4jVersion")
@@ -48,6 +49,11 @@ tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+}
+
+tasks.withType<Wrapper> {
+    gradleVersion = "5.3.1"
+    distributionType = Wrapper.DistributionType.ALL
 }
 
 /* ------------------------- PUBLISHING ------------------------- */

@@ -1,4 +1,9 @@
 rootProject.name = "deluge-rpc-kt"
 
-include("samples")
-project(":samples").name = "${rootProject.name}-samples"
+fun includeProject(name: String) {
+    include(name)
+    project(":$name").name = "${rootProject.name}-$name"
+}
+
+includeProject("samples")
+includeProject("rx2")
