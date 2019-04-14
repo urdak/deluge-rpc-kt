@@ -16,14 +16,13 @@ runBlocking {
 ```
 > You can get full code [here](samples/src/main/kotlin/net/ickis/deluge/samples/SimpleClient.kt)
 ##### Java
-Using [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html):
+Using [RxJava Single](http://reactivex.io/documentation/single.html):
 ```java
 try (DelugeJavaClient client = new DelugeJavaClient(IP, PORT, USERNAME, PASSWORD)) {
-    CompletableFuture<String> torrentIdFuture = client.addTorrent(MAGNET_LINK);
-    String torrentId = torrentIdFuture.get();
-    if (torrentId == null) throw new IllegalArgumentException("Bad magnet link");
-    CompletableFuture<Torrent> torrentStatus = client.getTorrentStatus(torrentId);
-    client.removeTorrent(torrentId, true).join();
+    Single<Optional<String>> torrentIdSingle = client.addTorrent(MAGNET_LINK);
+    String torrentId = torrentIdSingle.blockingGet().orElseThrow(() -> new IllegalArgumentException("Bad magnet link"));
+    Single<Torrent> torrentStatus = client.getTorrentStatus(torrentId);
+    client.removeTorrent(torrentId, true).blockingGet();
 }
 ```
 > You can get full code [here](samples/src/main/java/net/ickis/deluge/samples/SimpleClient.java)
@@ -43,6 +42,15 @@ delay(10000)
 channel.cancel() // clean up when channel is no longer needed
 ```
 > You can get full code [here](samples/src/main/kotlin/net/ickis/deluge/samples/HandlingEvents.kt)
+##### Java
+Using [RxJava Observable](http://reactivex.io/documentation/observable.html)
+```java
+Observable<String> observable = client.subscribe(TorrentRemovedEvent.INSTANCE);
+Disposable disposable = observable.subscribe(torrentId -> System.out.println("Removed " + torrentId));
+sleep(10000);
+disposable.dispose();
+```
+> You can get full code [here](samples/src/main/java/net/ickis/deluge/samples/HandlingEvents.java)
 
 ### Extending the client
 
