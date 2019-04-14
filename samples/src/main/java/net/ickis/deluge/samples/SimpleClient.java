@@ -1,10 +1,10 @@
 package net.ickis.deluge.samples;
 
+import io.reactivex.Single;
 import net.ickis.deluge.api.DelugeJavaClient;
 import net.ickis.deluge.api.Torrent;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.Optional;
 import java.util.function.Function;
 
 @SuppressWarnings("unused")
@@ -15,17 +15,17 @@ public class SimpleClient {
     public static final String PASSWORD = "password";
     public static final String MAGNET_LINK = "";
 
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public static void main(String[] args) {
         try (DelugeJavaClient client = new DelugeJavaClient(IP, PORT, USERNAME, PASSWORD)) {
-            CompletableFuture<String> torrentIdFuture = client.addTorrent(MAGNET_LINK);
-            String torrentId = torrentIdFuture.get();
-            if (torrentId == null) throw new IllegalArgumentException("Bad magnet link");
-            CompletableFuture<Torrent> torrentStatus = client.getTorrentStatus(torrentId);
-            client.removeTorrent(torrentId, true).join();
+            Single<Optional<String>> torrentIdSingle = client.addTorrent(MAGNET_LINK);
+            String torrentId = torrentIdSingle.blockingGet().orElseThrow(() -> new IllegalArgumentException("Bad magnet link"));
+            Single<Torrent> torrentStatus = client.getTorrentStatus(torrentId);
+            client.removeTorrent(torrentId, true).blockingGet();
         }
     }
 
-    public static <T> T create(Function<DelugeJavaClient, T> function) {
+    static <T> T create(Function<DelugeJavaClient, T> function) {
         try (DelugeJavaClient client = new DelugeJavaClient(IP, PORT, USERNAME, PASSWORD)) {
             return function.apply(client);
         }
