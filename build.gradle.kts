@@ -1,9 +1,4 @@
-import java.util.Properties
-import java.util.Date
-import java.nio.file.Files
-import com.jfrog.bintray.gradle.BintrayExtension.PackageConfig
-import com.jfrog.bintray.gradle.BintrayExtension.VersionConfig
-import org.jetbrains.dokka.gradle.DokkaTask
+import net.ickis.PublishKotlinJarPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 allprojects {
@@ -13,16 +8,21 @@ allprojects {
     repositories {
         jcenter()
     }
+
+    tasks.withType<KotlinCompile> {
+        kotlinOptions {
+            jvmTarget = "1.8"
+        }
+    }
 }
 
-version = "0.2-SNAPSHOT"
+version = "0.2"
 
 plugins {
     kotlin("jvm") version "1.3.20"
-    `maven-publish`
-    id("com.jfrog.bintray") version "1.8.4"
-    id("org.jetbrains.dokka") version "0.9.17"
 }
+
+plugins.apply(PublishKotlinJarPlugin::class)
 
 val junitVersion = "5.4.0"
 val log4jVersion = "2.11.2"
@@ -45,69 +45,7 @@ tasks.getting(Test::class) {
     useJUnitPlatform()
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-}
-
 tasks.withType<Wrapper> {
     gradleVersion = "5.3.1"
     distributionType = Wrapper.DistributionType.ALL
-}
-
-/* ------------------------- PUBLISHING ------------------------- */
-
-val sourcesJar = task<Jar>("sourcesJar") {
-    dependsOn(tasks["classes"])
-    classifier = "sources"
-    from(sourceSets["main"].allSource)
-}
-
-tasks.withType<DokkaTask> {
-    reportUndocumented = false
-    outputFormat = "javadoc"
-    outputDirectory = "$buildDir/javadoc"
-}
-
-val javadocJar = task<Jar>("javadocJar") {
-    dependsOn("dokka")
-    classifier = "javadoc"
-    from(buildDir.resolve("javadoc"))
-}
-
-publishing {
-    publications {
-        create("mavenJava", MavenPublication::class) {
-            from(components["java"])
-            artifact(sourcesJar)
-            artifact(javadocJar)
-            groupId = project.group.toString()
-            artifactId = project.name
-            version = project.version.toString()
-        }
-    }
-}
-
-val credentials = Files.newInputStream(rootProject.buildFile.toPath().resolveSibling("local.properties")).use {
-    val props = Properties()
-    props.load(it)
-    props
-}
-
-bintray {
-    user = credentials["bintray.user"] as? String
-    key = credentials["bintray.apikey"] as? String
-    pkg(closureOf<PackageConfig> {
-        repo = "maven"
-        name = project.name
-        setLicenses("MIT")
-        version(closureOf<VersionConfig> {
-            name = project.version.toString()
-            released = Date().toString()
-        })
-        setPublications("mavenJava")
-        vcsUrl = "https://github.com/urdak/deluge-rpc-kt"
-        publish = true
-    })
 }
