@@ -66,4 +66,14 @@ suspend fun DelugeClient.customCommand(param: Int) = request(CustomCommand(param
 ```
 > You can get full code [here](samples/src/main/kotlin/net/ickis/deluge/samples/ExtendingTheClient.kt)
 ### Gradle dependency
-TBD
+
+<pre>
+repositories {
+    jcenter()
+}
+
+dependencies {
+    implementation("net.ickis:deluge-rpc-kt:$version")
+    implementation("net.ickis:deluge-rpc-kt-rx2:$version")
+}
+</pre>
