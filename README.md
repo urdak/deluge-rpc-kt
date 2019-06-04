@@ -18,7 +18,7 @@ runBlocking {
 ##### Java
 Using [RxJava Single](http://reactivex.io/documentation/single.html):
 ```java
-try (DelugeJavaClient client = new DelugeJavaClient(IP, PORT, USERNAME, PASSWORD)) {
+try (DelugeJavaClient client = new DefaultDelugeJavaClient(IP, PORT, USERNAME, PASSWORD)) {
     Single<Optional<String>> torrentIdSingle = client.addTorrent(MAGNET_LINK);
     String torrentId = torrentIdSingle.blockingGet().orElseThrow(() -> new IllegalArgumentException("Bad magnet link"));
     Single<Torrent> torrentStatus = client.getTorrentStatus(torrentId);
@@ -73,7 +73,7 @@ repositories {
 }
 
 dependencies {
-    implementation("net.ickis:deluge-rpc-kt:$version")
-    implementation("net.ickis:deluge-rpc-kt-rx2:$version")
+    implementation("net.ickis:deluge-rpc-kt:0.3.0")
+    implementation("net.ickis:deluge-rpc-kt-rx2:0.3.0")
 }
 </pre>

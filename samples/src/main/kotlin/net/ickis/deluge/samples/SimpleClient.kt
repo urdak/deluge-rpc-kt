@@ -1,10 +1,7 @@
 package net.ickis.deluge.samples
 
 import kotlinx.coroutines.runBlocking
-import net.ickis.deluge.api.DelugeClient
-import net.ickis.deluge.api.Torrent
-import net.ickis.deluge.api.delugeClient
-import java.lang.IllegalArgumentException
+import net.ickis.deluge.api.*
 
 const val IP = "localhost"
 const val PORT = 1234
@@ -23,6 +20,6 @@ fun main() {
     }
 }
 
-fun <T> simpleClient(block: suspend (DelugeClient) -> T) = runBlocking {
+fun <T> simpleClient(block: suspend (DefaultDelugeClient) -> T) = runBlocking {
     delugeClient(IP, PORT, USERNAME, PASSWORD, block)
 }

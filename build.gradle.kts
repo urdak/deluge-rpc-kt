@@ -1,5 +1,6 @@
 import net.ickis.PublishKotlinJarPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.nio.file.Files
 
 allprojects {
     group = "net.ickis"
@@ -16,13 +17,14 @@ allprojects {
     }
 }
 
-version = "0.2"
+version = "0.3.0"
 
 plugins {
     kotlin("jvm") version "1.3.20"
 }
-
-plugins.apply(PublishKotlinJarPlugin::class)
+if (Files.exists(project.rootProject.buildFile.toPath().resolveSibling("local.properties"))) {
+    plugins.apply(PublishKotlinJarPlugin::class)
+}
 
 val junitVersion = "5.4.0"
 val log4jVersion = "2.11.2"
